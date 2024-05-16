@@ -1,0 +1,30 @@
+name: CI/CD DEV deploy to TGG-Bicep
+run-name: CI/CD DEV deploy to TGG-Bicep
+on: [workflow_dispatch]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run Bicep linter
+      run: az bicep build --file bicep/deploy/templates/main.bicep
+        
+  dev-deploy-bicep:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Deploy DEV files
+        uses: andstor/copycat-action@v3
+        with:
+          personal_token: ${{ secrets.API_TOKEN_GITHUB }}
+          src_path: bicep/deploy/templates/
+          exclude: "*/modules/*"
+          dst_path: deploy/
+          filter: "**/bicep/deploy/templates/main*(.dev).bicep*"
+          dst_owner: TGG-Dev
+          dst_repo_name: TGG-Bicep
+          dst_branch: master
+          src_branch: dev
+          commit_message:  ${{ github.event.head_commit.message }}
+          clean: true
